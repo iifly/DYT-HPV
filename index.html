@@ -1,13 +1,86 @@
 <!DOCTYPE html>
-<html>
+<html data-theme="dark">
 
 <head>
     <meta charset="utf-8">
     <title>web page</title>
+    <link rel="stylesheet" href="https://unpkg.com/@picocss/pico@latest/css/pico.min.css">
 </head>
 
 <body>
-    <h1>hello, web page!</h1>
+    <header class="container">
+        <h1 style="text-align: center;">DYT</h1>
+    </header>
+
+    <main class="container">
+        <div id="dyt">
+            <!-- Token 配置 -->
+            <details open>
+                <summary role="button">1.Token 配置</summary>
+                <label>请输入 Token
+                    <input type="text" v-model="tokenIn" :aria-invalid="!isSetToken">
+                </label>
+            </details>
+
+            <!--  -->
+            <details>
+                <summary role="button" class="secondary">2.选择就诊人</summary>
+                <label v-if="!isSetToken">需先配置 Token</label>
+                <button @click="queryPatient" :disabled="!isSetToken">查询就诊人</button>
+                <fieldset>
+                    <label v-for="patientItem in patientList">
+                        <input type="radio" v-model="patient" :value="patientItem"> {{patientItem.patient_name}}
+                    </label>
+                </fieldset>
+            </details>
+
+            <details>
+                <summary role="button" class="contrast">3.选择疫苗</summary>
+                <button @click="refreshCache">刷新医院信息</button>
+                <label v-for="hosItem in hpvHosList">
+                    <details>
+                        <summary> {{hosItem.hos_name}}</summary>
+                        <div v-for="doc in hosItem.doctor">
+                            <!-- <div v-for="value,key in hpv.detail"> -->
+                            <label v-if="doc.detail">
+                                <ins>
+                                    <input type="checkbox" v-model="checkedHpvList" :value="doc.detail">
+                                    【{{doc.detail.dep_id}}_{{doc.detail.doc_id}}】{{doc.detail.doc_name}}#{{doc.detail.dep_name}}
+                                </ins>
+                            </label>
+                            <!-- </div> -->
+                        </div>
+                    </details>
+                </label>
+            </details>
+            <details>
+                <summary role="button" class="contrast outline">4.查询已选疫苗排班情况</summary>
+                <button @click="querySchedule">查询排班情况</button><br>
+                <table role="grid">
+                    <tr>
+                        <td>医院</td>
+                        <td>疫苗名称</td>
+                        <td>接种时间</td>
+                        <td>疫苗总数</td>
+                        <td>剩余总数</td>
+                        <td>操作</td>
+                    </tr>
+
+                    <tr v-for="schedule in schedules">
+                        <td>{{schedule.hpv.hos_name}}</td>
+                        <td>{{schedule.hpv.doc_name}}</td>
+                        <td>{{schedule.sch_date}}&emsp;{{schedule.cate_name}}</td>
+                        <td>{{schedule.src_max}}</td>
+                        <td>{{schedule.src_num}}</td>
+                        <td><button :disabled="!(schedule.src_num > 0)" @click="appoint(schedule.hpv, schedule)">预约</button></td>
+                    </tr>
+                </table>
+            </details>
+        </div>
+    </main>
 </body>
+<script src="https://unpkg.com/vue@next"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios@0.12.0/dist/axios.min.js"></script>
+<script src="dyt.js"></script>
 
 </html>
