@@ -50,7 +50,7 @@ function getCache(name) {
     return JSON.parse(sessionStorage.getItem(name));
 }
 
-function parseToken(token) {
+function parseJWT(token) {
     console.log("token sourse : ", token);
     var base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     var tokenParse = JSON.parse(window.atob(base64));
@@ -89,7 +89,8 @@ const DYT = {
             patient: {},
             hpvHosList: [],
             checkedHpvList: [],
-            schedules: []
+            schedules: [],
+            tabs: [true, false, false, false]
         }
     },
     created() {
@@ -102,49 +103,57 @@ const DYT = {
         }
         console.log("init initHpvHos", _this.hpvHosList);
     },
-    watch: {
-        tokenIn(newVal, oldVal) {
+    methods: {
+        // 解析 Token 
+        async parseToken() {
             var _this = this
-            var index = newVal.indexOf("=");
+            var index = _this.tokenIn.indexOf("=");
             if (-1 !== index) {
-                newVal = newVal.slice(index + 1);
+                _this.tokenIn = _this.tokenIn.slice(index + 1);
             }
             try {
-                var tokenParse = parseToken(newVal)
+                var tokenParse = parseJWT(_this.tokenIn)
                 var userId = tokenParse.user_id;
                 if (isEmpty(userId)) {
-                    _this.tokenMsg = "token 解析失败！请重新输入...";
+                    _this.tokenMsg = "Token 解析失败！请确认Token 是否正确";
                     return;
                 }
-                _this.token = newVal;
-                _this.tokenParse = tokenParse;
-                _this.userId = userId;
-                _this.isSetToken = true;
+                var queryPatientRes = await _this.queryPatient(_this.tokenIn);
+                console.log("## queryPatientRes ==>", queryPatientRes);
+                if(queryPatientRes === true){
+                    _this.token = _this.tokenIn;
+                    _this.tokenParse = tokenParse;
+                    _this.userId = userId;
+                    _this.isSetToken = true;
+                    _this.tokenMsg = "Token 解析成功！";
+                }else{
+                    _this.tokenMsg = "Token 已过期！";
+                };
             } catch (error) {
-                _this.tokenMsg = "token 解析失败或已过期！请重新输入...";
+                console.log(error);
+                _this.tokenMsg = "Token 解析失败或已过期！";
             }
         },
-        patient(newVal, oldVal) {
-            var _this = this;
-            console.log("## patient ==>", _this.patient);
-        }
-    },
-    methods: {
+
         // 查询就诊人
-        queryPatient() {
+        async queryPatient(token) {
             var _this = this;
             var base_url = query_patient_url + _this.userId;
-            var access_token = "DYT " + _this.token;
-            axios_instance.get(base_url, {
+            var access_token = "DYT " + token;
+            var res = false;
+            await axios_instance.get(base_url, {
                 headers: {
                     'Authorization': access_token
                 }
             }).then(data => {
                 _this.patientList = data;
                 console.log("## patientList ==> ", _this.patientList);
+                res = true;
             }).catch(err => {
                 console.error(err)
+                res = false;
             })
+            return res;
         },
 
         // 查询九价医院
@@ -215,11 +224,13 @@ const DYT = {
                 return;
             }
             var next = 0;
+
             _this.schedules = [];
             console.log("## checkedHpvList ==>", checkedHpvList);
             for (index in checkedHpvList) {
+                var res = null;
                 var hpv = checkedHpvList[index];
-                axios_instance.get(query_schedule_url, {
+                await axios_instance.get(query_schedule_url, {
                     params: {
                         "dep_id": hpv.dep_id,
                         "doc_id": hpv.doc_id,
@@ -227,13 +238,16 @@ const DYT = {
                     }
                 }).then(data => {
                     console.log("## schedule ==>", data);
-                    data.forEach(e => {
-                        e["hpv"] = hpv;
-                        _this.schedules[next++] = e;
-                    });
+                    res = data;
                 }).catch(err => {
                     console.error(err)
                 })
+                if (!isEmpty(res)) {
+                    res.forEach(e => {
+                        e["hpv"] = hpv;
+                        _this.schedules[next++] = e;
+                    });
+                }
 
             }
         },
@@ -241,6 +255,14 @@ const DYT = {
         // 预约
         appoint(hpvDetail, schedule) {
             var _this = this;
+            if(!_this.isSetToken){
+                alert("未配置 Token!");
+                return;
+            }
+            if(isEmpty(_this.patient)){
+                alert("未选择就诊人！");
+                return;
+            }
             if (_this.appointSuccess) {
                 alert("已有预约成功记录！");
                 return;
@@ -283,9 +305,19 @@ const DYT = {
                     _this.appointSuccess = true;
                     alert("预约成功！" + hpvDetail.hos_name + "#" + schedule.sch_date + " " + schedule.cate_name);
                 }).catch(err => {
+                    alert(err)
                     console.error(err)
                 })
 
+        },
+        show(index) {
+            var _this = this;
+            for (tabIndex in _this.tabs) {
+                if (index == tabIndex)
+                    _this.tabs[tabIndex] = true;
+                else
+                    _this.tabs[tabIndex] = false;
+            }
         },
     }
 }

@@ -14,48 +14,64 @@
 
     <main class="container">
         <div id="dyt">
+            <nav>
+                <ul>
+                    <li><button @click="show(0)" :class="{ secondary : !tabs[0] }">1.Token 配置</button></li>
+                </ul>
+                <ul>
+                    <li><button @click="show(1)" :class="{ secondary : !tabs[1] }">2.选择就诊人</button></li>
+                </ul>
+                <ul>
+                    <li><button @click="show(2)" :class="{ secondary : !tabs[2] }">3.选择疫苗</button></li>
+                </ul>
+                <ul>
+                    <li><button @click="show(3)" :class="{ secondary : !tabs[3] }">4.查询已选疫苗排班情况</button></li>
+                </ul>
+            </nav>
             <!-- Token 配置 -->
-            <details open>
-                <summary role="button">1.Token 配置</summary>
+            <article v-show="tabs[0]">
+
                 <label>请输入 Token
                     <input type="text" v-model="tokenIn" :aria-invalid="!isSetToken">
+                    <small role="button" @click="parseToken" :data-tooltip="tokenMsg">确认</small>
                 </label>
-            </details>
+            </article>
 
             <!--  -->
-            <details>
-                <summary role="button" class="secondary">2.选择就诊人</summary>
-                <label v-if="!isSetToken">需先配置 Token</label>
-                <button @click="queryPatient" :disabled="!isSetToken">查询就诊人</button>
+            <article v-show="tabs[1]">
+
+                <label v-if="!isSetToken" style="color: red;">提示：需先配置 Token!</label>
+                <!-- <button @click="queryPatient(token)" :disabled="!isSetToken">查询就诊人</button> -->
                 <fieldset>
                     <label v-for="patientItem in patientList">
                         <input type="radio" v-model="patient" :value="patientItem"> {{patientItem.patient_name}}
                     </label>
                 </fieldset>
-            </details>
+            </article>
 
-            <details>
-                <summary role="button" class="contrast">3.选择疫苗</summary>
-                <button @click="refreshCache">刷新医院信息</button>
+            <article v-show="tabs[2]">
+
+                <!-- <button @click="refreshCache">刷新医院信息</button> -->
                 <label v-for="hosItem in hpvHosList">
-                    <details>
-                        <summary> {{hosItem.hos_name}}</summary>
+                    <figure>
+                        <b> {{hosItem.hos_name}} </b>
                         <div v-for="doc in hosItem.doctor">
-                            <!-- <div v-for="value,key in hpv.detail"> -->
                             <label v-if="doc.detail">
                                 <ins>
                                     <input type="checkbox" v-model="checkedHpvList" :value="doc.detail">
                                     【{{doc.detail.dep_id}}_{{doc.detail.doc_id}}】{{doc.detail.doc_name}}#{{doc.detail.dep_name}}
                                 </ins>
                             </label>
-                            <!-- </div> -->
                         </div>
-                    </details>
+                    <button @click="querySchedule(), show(3)">查询排班情况</button><br>
+                    </figure>
                 </label>
-            </details>
-            <details>
-                <summary role="button" class="contrast outline">4.查询已选疫苗排班情况</summary>
+            </article>
+            <article v-show="tabs[3]">
+
                 <button @click="querySchedule">查询排班情况</button><br>
+                <label v-if="!isSetToken" style="color: red;">提示：预约需先配置 Token!</label>
+                <label v-if="patient" style="color: red;">提示：预约需先选择就诊人!</label>
                 <table role="grid">
                     <tr>
                         <td>医院</td>
@@ -72,10 +88,11 @@
                         <td>{{schedule.sch_date}}&emsp;{{schedule.cate_name}}</td>
                         <td>{{schedule.src_max}}</td>
                         <td>{{schedule.src_num}}</td>
-                        <td><button :disabled="!(schedule.src_num > 0)" @click="appoint(schedule.hpv, schedule)">预约</button></td>
+                        <td><button :disabled="!(schedule.src_num > 0)"
+                                @click="appoint(schedule.hpv, schedule)">预约</button></td>
                     </tr>
                 </table>
-            </details>
+            </article>
         </div>
     </main>
 </body>
