@@ -248,8 +248,10 @@ const DYT = {
                         _this.schedules[next++] = e;
                     });
                 }
-
             }
+            _this.schedules.sort((a,b) =>{
+                return b.src_num - a.src_num;
+            })
         },
 
         // 预约
